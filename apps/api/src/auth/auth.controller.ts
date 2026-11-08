@@ -53,17 +53,29 @@ export class AuthController {
     };
   }
 
+@Get('me')
+@UseGuards(JwtAuthGuard)
+getMe(
+  @Req()
+  request: Request & {
+    user: {
+      id: string;
+      email: string;
+    };
+  },
+) {
+  return this.authService.getProfile(request.user.id);
+}
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(
-    @Req()
-    request: Request & {
-      user: {
-        userId: string;
-        email: string;
-      };
-    },
-  ) {
-    return this.authService.getProfile(request.user.userId);
+  getProfile(@Req() request: any) {
+    console.log('ME ENDPOINT REACHED');
+    console.log('REQUEST USER:', request.user);
+
+    return {
+      message: 'Authenticated successfully',
+      user: request.user ?? null,
+    };
   }
 }

@@ -1,7 +1,5 @@
-
 "use client";
-
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -19,18 +17,37 @@ import {
 } from "lucide-react";
 
 import ProtectedRoute from "@/components/auth/protected-route";
+import { apiRequest } from "@/lib/api";
 
-type DocumentStatus = "Ready" | "Processing" | "Failed";
 type DocumentType = "PDF" | "DOCX";
 
-interface DocumentItem {
-  id: number;
+type DocumentStatus = "Uploaded" | "Ready" | "Processing" | "Failed";
+
+type ApiDocumentStatus = "UPLOADED" | "READY" | "PROCESSING" | "FAILED";
+
+type DocumentItem = {
+  id: any;
   name: string;
-  type: DocumentType;
+  type: string;
   size: string;
   uploadedAt: string;
   status: DocumentStatus;
-}
+};
+
+type ApiDocument = {
+  id: string;
+  title: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: ApiDocumentStatus;
+  createdAt: string;
+};
+
+type DocumentsResponse = {
+  message: string;
+  documents: ApiDocument[];
+};
 
 const initialDocuments: DocumentItem[] = [
   {
@@ -75,17 +92,85 @@ const initialDocuments: DocumentItem[] = [
   },
 ];
 
-const filters = ["All", "Ready", "Processing", "Failed"] as const;
+const filters = ["All", "Uploaded", "Ready", "Processing", "Failed"] as const;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function mapDocumentStatus(status: ApiDocumentStatus): DocumentStatus {
+  const statusMap: Record<ApiDocumentStatus, DocumentStatus> = {
+    UPLOADED: "Uploaded",
+    READY: "Ready",
+    PROCESSING: "Processing",
+    FAILED: "Failed",
+  };
+
+  return statusMap[status];
+}
+
+function mapApiDocument(doc: ApiDocument): DocumentItem {
+  return {
+    id: doc.id,
+    name: doc.originalName,
+    type: doc.mimeType.includes("pdf") ? "PDF" : "DOCX",
+    size: formatFileSize(doc.sizeBytes),
+    uploadedAt: new Date(doc.createdAt).toLocaleDateString(),
+    status: mapDocumentStatus(doc.status),
+  };
+}
 
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState(initialDocuments);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] =
     useState<(typeof filters)[number]>("All");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDocuments() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await apiRequest<DocumentsResponse>("/documents");
+
+        if (isMounted) {
+          setDocuments(response.documents.map(mapApiDocument));
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load documents.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadDocuments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
@@ -100,29 +185,21 @@ export default function DocumentsPage() {
     });
   }, [documents, search, activeFilter]);
 
-  const readyCount = documents.filter(
-    (doc) => doc.status === "Ready"
-  ).length;
+  const readyCount = documents.filter((doc) => doc.status === "Ready").length;
 
   const processingCount = documents.filter(
-    (doc) => doc.status === "Processing"
+    (doc) => doc.status === "Processing",
   ).length;
 
-  const failedCount = documents.filter(
-    (doc) => doc.status === "Failed"
-  ).length;
+  const failedCount = documents.filter((doc) => doc.status === "Failed").length;
 
-  function handleFileChange(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
     const validExtensions = [".pdf", ".docx"];
-    const extension = file.name
-      .slice(file.name.lastIndexOf("."))
-      .toLowerCase();
+    const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
 
     if (!validExtensions.includes(extension)) {
       alert("Only PDF and DOCX files are supported.");
@@ -133,14 +210,27 @@ export default function DocumentsPage() {
     setSelectedFile(file);
   }
 
-  function handleDelete() {
-    if (deleteId === null) return;
+  async function handleDelete() {
+    if (deleteId === null || isDeleting) return;
 
-    setDocuments((current) =>
-      current.filter((doc) => doc.id !== deleteId)
-    );
+    try {
+      setIsDeleting(true);
+      setError(null);
 
-    setDeleteId(null);
+      await apiRequest(`/documents/${deleteId}`, {
+        method: "DELETE",
+      });
+
+      setDocuments((current) => current.filter((doc) => doc.id !== deleteId));
+
+      setDeleteId(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to delete document.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   function getStatusStyle(status: DocumentStatus) {
@@ -151,6 +241,8 @@ export default function DocumentsPage() {
         return "bg-amber-50 text-amber-700";
       case "Failed":
         return "bg-red-50 text-red-700";
+      case "Uploaded":
+        return "bg-blue-50 text-blue-700";
     }
   }
 
@@ -162,6 +254,8 @@ export default function DocumentsPage() {
         return <Clock3 size={14} />;
       case "Failed":
         return <AlertCircle size={14} />;
+      case "Uploaded":
+        return <Clock3 size={14} />;
     }
   }
 
@@ -169,7 +263,6 @@ export default function DocumentsPage() {
     <ProtectedRoute>
       <main className="min-h-screen bg-[#f7f8fc] px-4 py-6 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-7xl">
-
           {/* Header */}
           <div className="mb-8">
             <Link
@@ -332,11 +425,28 @@ export default function DocumentsPage() {
                     <th className="px-6 py-4 font-semibold">Size</th>
                     <th className="px-6 py-4 font-semibold">Uploaded</th>
                     <th className="px-6 py-4 font-semibold">Status</th>
-                    <th className="px-6 py-4 text-right font-semibold">Action</th>
+                    <th className="px-6 py-4 text-right font-semibold">
+                      Action
+                    </th>
                   </tr>
                 </thead>
 
+                {error && (
+                  <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
                 <tbody className="divide-y divide-slate-100">
+                  {isLoading && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-12 text-center text-slate-500"
+                      >
+                        Loading documents...
+                      </td>
+                    </tr>
+                  )}
                   {filteredDocuments.map((doc) => (
                     <tr key={doc.id} className="transition hover:bg-slate-50">
                       <td className="px-6 py-4">
@@ -360,7 +470,9 @@ export default function DocumentsPage() {
                         {doc.uploadedAt}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyle(doc.status)}`}>
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyle(doc.status)}`}
+                        >
                           {getStatusIcon(doc.status)}
                           {doc.status}
                         </span>
@@ -382,6 +494,11 @@ export default function DocumentsPage() {
 
             {/* Mobile cards */}
             <div className="divide-y divide-slate-100 md:hidden">
+              {isLoading && (
+                <p className="p-6 text-center text-sm text-slate-500">
+                  Loading documents...
+                </p>
+              )}
               {filteredDocuments.map((doc) => (
                 <div key={doc.id} className="flex items-center gap-3 p-4">
                   <div className="rounded-lg bg-indigo-50 p-3 text-indigo-600">
@@ -395,7 +512,9 @@ export default function DocumentsPage() {
                     <p className="mt-1 text-xs text-slate-500">
                       {doc.type} · {doc.size}
                     </p>
-                    <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${getStatusStyle(doc.status)}`}>
+                    <span
+                      className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${getStatusStyle(doc.status)}`}
+                    >
                       {getStatusIcon(doc.status)}
                       {doc.status}
                     </span>
@@ -454,9 +573,10 @@ export default function DocumentsPage() {
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+                  disabled={isDeleting}
+                  className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Delete
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </button>
               </div>
             </div>
@@ -489,9 +609,7 @@ function StatCard({
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-500">{label}</p>
-        <div className={`rounded-xl p-2.5 ${styles[color]}`}>
-          {icon}
-        </div>
+        <div className={`rounded-xl p-2.5 ${styles[color]}`}>{icon}</div>
       </div>
       <p className="mt-4 text-3xl font-bold text-slate-900">{value}</p>
     </div>

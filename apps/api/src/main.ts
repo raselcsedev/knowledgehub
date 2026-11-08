@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -10,12 +11,16 @@ async function bootstrap() {
     origin: 'http://localhost:3000',
     credentials: true,
   });
-
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   await app.listen(3001);
 
-  console.log(
-    'KnowledgeHub API running at http://localhost:3001/api',
-  );
+  console.log('KnowledgeHub API running at http://localhost:3001/api');
 }
 
 bootstrap();

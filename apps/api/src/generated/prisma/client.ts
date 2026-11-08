@@ -49,3 +49,8 @@ export type User = Prisma.UserModel
  * 
  */
 export type RefreshToken = Prisma.RefreshTokenModel
+/**
+ * Model Document
+ * 
+ */
+export type Document = Prisma.DocumentModel

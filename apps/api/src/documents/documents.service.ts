@@ -9,13 +9,84 @@ import { promises as fs } from 'fs';
 import { extname } from 'path';
 import { DocumentTextExtractorService } from './document-text-extractor.service';
 import { DocumentChunkingService } from './document-chunking.service';
+import { EmbeddingsService } from './embeddings.service';
 @Injectable()
 export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly textExtractor: DocumentTextExtractorService,
     private readonly chunkingService: DocumentChunkingService,
+    private readonly embeddingsService: EmbeddingsService,
   ) {}
+
+  async generateDocumentEmbeddings(documentId: string, userId: string) {
+    // Verify document ownership
+    // Retrieve document chunks
+    // Generate embeddings
+    // Return embedding information
+  }
+ 
+async generateDocumentEmbedding(
+  documentId: string,
+  userId: string,
+) {
+  const document = await this.prisma.document.findFirst({
+    where: {
+      id: documentId,
+      userId,
+    },
+    select: {
+      id: true,
+      title: true,
+    },
+  });
+
+  if (!document) {
+    throw new NotFoundException('Document not found');
+  }
+
+  // Retrieve all document chunks.
+  const chunks = await this.prisma.documentChunk.findMany({
+    where: {
+      documentId: document.id,
+    },
+    orderBy: {
+      chunkIndex: 'asc',
+    },
+  });
+
+  if (chunks.length === 0) {
+    throw new NotFoundException('No chunks found for this document');
+  }
+
+  // Generate an embedding for every chunk.
+  const results = [];
+
+  for (const chunk of chunks) {
+    const embedding = await this.embeddingsService.generateEmbedding(
+      chunk.content,
+    );
+
+    results.push({
+      chunkId: chunk.id,
+      chunkIndex: chunk.chunkIndex,
+      dimensions: embedding.length,
+      preview: embedding.slice(0, 5),
+    });
+  }
+
+  return {
+    message: 'Document embeddings generated successfully',
+    document: {
+      id: document.id,
+      title: document.title,
+    },
+    totalChunks: chunks.length,
+    processedChunks: results.length,
+    embeddings: results,
+  };
+}
+
 
   async upload(file: Express.Multer.File, userId: string) {
     let document;
@@ -57,6 +128,9 @@ export class DocumentsService {
 
       // 2. Split extracted text into chunks
       const chunks = this.chunkingService.splitText(extractedText);
+      console.log('Document ID:', document.id);
+      console.log('Extracted text length:', extractedText.length);
+      console.log('Generated chunks:', chunks.length);
 
       if (chunks.length === 0) {
         throw new Error('No chunks generated from document');
@@ -64,15 +138,26 @@ export class DocumentsService {
 
       // 3. Save extracted text, chunks, and status together
       const updatedDocument = await this.prisma.$transaction(async (tx) => {
-        // Remove old chunks if this document is processed again
-        await tx.documentChunk.deleteMany({
+        // Remove old chunks
+        const deletedChunks = await tx.documentChunk.deleteMany({
           where: {
             documentId: document.id,
           },
         });
 
-        // Save all generated chunks
-        await tx.documentChunk.createMany({
+        console.log('Deleted chunk records:', deletedChunks.count);
+
+        // Confirm no old chunks remain
+        const remainingChunks = await tx.documentChunk.count({
+          where: {
+            documentId: document.id,
+          },
+        });
+
+        console.log('Remaining chunks:', remainingChunks);
+
+        // Insert chunks exactly once
+        const result = await tx.documentChunk.createMany({
           data: chunks.map((content, index) => ({
             documentId: document.id,
             content,
@@ -80,6 +165,8 @@ export class DocumentsService {
             charCount: content.length,
           })),
         });
+
+        console.log('Saved chunk records:', result.count);
 
         // Mark document as ready
         return tx.document.update({
@@ -158,7 +245,7 @@ export class DocumentsService {
     };
   }
 
-    async findChunksByUser(documentId: string, userId: string) {
+  async findChunksByUser(documentId: string, userId: string) {
     // First verify document ownership
     const document = await this.prisma.document.findFirst({
       where: {

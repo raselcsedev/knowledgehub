@@ -135,4 +135,18 @@ export class DocumentsController {
   ) {
     return this.documentsService.remove(documentId, request.user.id);
   }
+
+  @Post(':id/embed')
+  async generateEmbedding(
+    @Param('id', ParseUUIDPipe) documentId: string,
+    @Req()
+    request: Request & {
+      user: { id: string; email: string };
+    },
+  ) {
+    return this.documentsService.generateDocumentEmbedding(
+      documentId,
+      request.user.id,
+    );
+  }
 }

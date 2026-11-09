@@ -54,3 +54,8 @@ export type RefreshToken = Prisma.RefreshTokenModel
  * 
  */
 export type Document = Prisma.DocumentModel
+/**
+ * Model DocumentChunk
+ * 
+ */
+export type DocumentChunk = Prisma.DocumentChunkModel

@@ -8,12 +8,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { promises as fs } from 'fs';
 import { extname } from 'path';
 import { DocumentTextExtractorService } from './document-text-extractor.service';
-
+import { DocumentChunkingService } from './document-chunking.service';
 @Injectable()
 export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly textExtractor: DocumentTextExtractorService,
+    private readonly chunkingService: DocumentChunkingService,
   ) {}
 
   async upload(file: Express.Multer.File, userId: string) {
@@ -51,20 +52,52 @@ export class DocumentsService {
 
     // 3. Extract text and save it
     try {
+      // 1. Extract document text
       const extractedText = await this.textExtractor.extractText(file.path);
 
-      const updatedDocument = await this.prisma.document.update({
-        where: { id: document.id },
-        data: {
-          extractedText,
-          processedAt: new Date(),
-          status: 'READY',
-        },
+      // 2. Split extracted text into chunks
+      const chunks = this.chunkingService.splitText(extractedText);
+
+      if (chunks.length === 0) {
+        throw new Error('No chunks generated from document');
+      }
+
+      // 3. Save extracted text, chunks, and status together
+      const updatedDocument = await this.prisma.$transaction(async (tx) => {
+        // Remove old chunks if this document is processed again
+        await tx.documentChunk.deleteMany({
+          where: {
+            documentId: document.id,
+          },
+        });
+
+        // Save all generated chunks
+        await tx.documentChunk.createMany({
+          data: chunks.map((content, index) => ({
+            documentId: document.id,
+            content,
+            chunkIndex: index,
+            charCount: content.length,
+          })),
+        });
+
+        // Mark document as ready
+        return tx.document.update({
+          where: {
+            id: document.id,
+          },
+          data: {
+            extractedText,
+            processedAt: new Date(),
+            status: 'READY',
+          },
+        });
       });
 
       return {
-        message: 'Document uploaded and processed successfully',
+        message: 'Document uploaded, extracted and chunked successfully',
         document: updatedDocument,
+        chunkCount: chunks.length,
       };
     } catch (error) {
       console.error('Document processing failed:', error);
@@ -122,6 +155,48 @@ export class DocumentsService {
     return {
       message: 'Document retrieved successfully',
       document,
+    };
+  }
+
+    async findChunksByUser(documentId: string, userId: string) {
+    // First verify document ownership
+    const document = await this.prisma.document.findFirst({
+      where: {
+        id: documentId,
+        userId,
+      },
+      select: {
+        id: true,
+        title: true,
+      },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    // Retrieve chunks in their original order
+    const chunks = await this.prisma.documentChunk.findMany({
+      where: {
+        documentId: document.id,
+      },
+      orderBy: {
+        chunkIndex: 'asc',
+      },
+      select: {
+        id: true,
+        content: true,
+        chunkIndex: true,
+        charCount: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      message: 'Document chunks retrieved successfully',
+      document,
+      chunkCount: chunks.length,
+      chunks,
     };
   }
 

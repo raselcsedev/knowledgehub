@@ -67,3 +67,17 @@ model Document {
   @@index([userId])
   @@index([status])
 }
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  content    String   @db.Text
+  chunkIndex Int
+  charCount  Int
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+}

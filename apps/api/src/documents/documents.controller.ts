@@ -114,6 +114,17 @@ export class DocumentsController {
     return this.documentsService.findOneByUser(documentId, request.user.id);
   }
 
+  @Get(':id/chunks')
+  async findChunks(
+    @Param('id', ParseUUIDPipe) documentId: string,
+    @Req()
+    request: Request & {
+      user: { id: string; email: string };
+    },
+  ) {
+    return this.documentsService.findChunksByUser(documentId, request.user.id);
+  }
+
   @Delete(':id')
   async remove(
     @Param('id', ParseUUIDPipe) documentId: string,

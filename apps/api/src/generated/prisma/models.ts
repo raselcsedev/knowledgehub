@@ -11,4 +11,5 @@
 export type * from './models/User.js'
 export type * from './models/RefreshToken.js'
 export type * from './models/Document.js'
+export type * from './models/DocumentChunk.js'
 export type * from './commonInputTypes.js'

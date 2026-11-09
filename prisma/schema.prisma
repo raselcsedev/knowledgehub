@@ -45,16 +45,21 @@ enum DocumentStatus {
 }
 
 model Document {
-  id           String         @id @default(uuid())
-  title        String
-  originalName String
-  mimeType     String
-  sizeBytes    Int
-  storagePath  String
-  status       DocumentStatus @default(UPLOADED)
+  id            String         @id @default(uuid())
+  title         String
+  originalName  String
+  mimeType      String
+  sizeBytes     Int
+  storagePath   String
+  status        DocumentStatus @default(UPLOADED)
+
+  extractedText String?        @db.Text
+  processedAt   DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  chunks DocumentChunk[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -36,3 +36,4 @@ Thumbs.db
 /generated/prisma
 
 cookies.txt
+apps/api/uploads/

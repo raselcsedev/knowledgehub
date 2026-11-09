@@ -3,6 +3,7 @@ import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 import { DocumentTextExtractorService } from './document-text-extractor.service';
 import { DocumentChunkingService } from './document-chunking.service';
+import { EmbeddingsService } from './embeddings.service';
 
 @Module({
   controllers: [DocumentsController],
@@ -10,6 +11,7 @@ import { DocumentChunkingService } from './document-chunking.service';
     DocumentsService,
     DocumentTextExtractorService,
     DocumentChunkingService,
+    EmbeddingsService,
   ],
 })
 export class DocumentsModule {}

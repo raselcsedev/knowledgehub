@@ -104,6 +104,8 @@ export const DocumentScalarFieldEnum = {
   sizeBytes: 'sizeBytes',
   storagePath: 'storagePath',
   status: 'status',
+  extractedText: 'extractedText',
+  processedAt: 'processedAt',
   userId: 'userId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

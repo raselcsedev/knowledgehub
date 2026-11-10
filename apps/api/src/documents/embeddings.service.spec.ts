@@ -22,7 +22,9 @@ describe('EmbeddingsService', () => {
     jest.clearAllMocks();
 
     configService = {
-      get: jest.fn().mockReturnValue('test-api-key'),
+      get: jest.fn((key: string) =>
+        key === 'EMBEDDINGS_PROVIDER' ? 'openai' : 'test-api-key',
+      ),
     };
 
     createMock = jest.fn().mockResolvedValue({
@@ -35,13 +37,13 @@ describe('EmbeddingsService', () => {
       },
     }));
 
-    service = new EmbeddingsService(
-      configService as unknown as ConfigService,
-    );
+    service = new EmbeddingsService(configService as unknown as ConfigService);
   });
 
   it('should generate a 1536-dimensional embedding', async () => {
-    const result = await service.generateEmbedding('KnowledgeHub is an AI document assistant.');
+    const result = await service.generateEmbedding(
+      'KnowledgeHub is an AI document assistant.',
+    );
 
     expect(result).toHaveLength(1536);
     expect(createMock).toHaveBeenCalledWith({
@@ -60,11 +62,13 @@ describe('EmbeddingsService', () => {
   });
 
   it('should reject when API key is missing', async () => {
-    configService.get.mockReturnValue(undefined);
+    configService.get.mockImplementation((key: string) =>
+      key === 'EMBEDDINGS_PROVIDER' ? 'openai' : undefined,
+    );
 
-    await expect(
-      service.generateEmbedding('Test document'),
-    ).rejects.toThrow(InternalServerErrorException);
+    await expect(service.generateEmbedding('Test document')).rejects.toThrow(
+      InternalServerErrorException,
+    );
 
     expect(createMock).not.toHaveBeenCalled();
   });
@@ -72,9 +76,9 @@ describe('EmbeddingsService', () => {
   it('should handle OpenAI API errors', async () => {
     createMock.mockRejectedValue(new Error('OpenAI API error'));
 
-    await expect(
-      service.generateEmbedding('Test document'),
-    ).rejects.toThrow(InternalServerErrorException);
+    await expect(service.generateEmbedding('Test document')).rejects.toThrow(
+      InternalServerErrorException,
+    );
   });
 
   it('should reject unexpected embedding dimensions', async () => {
@@ -82,8 +86,29 @@ describe('EmbeddingsService', () => {
       data: [{ embedding: [0.1, 0.2] }],
     });
 
-    await expect(
-      service.generateEmbedding('Test document'),
-    ).rejects.toThrow(InternalServerErrorException);
+    await expect(service.generateEmbedding('Test document')).rejects.toThrow(
+      InternalServerErrorException,
+    );
   });
+it('should generate mock embeddings without calling OpenAI', async () => {
+  configService.get.mockImplementation((key: string) =>
+    key === 'EMBEDDINGS_PROVIDER' ? 'mock' : undefined,
+  );
+
+  const result = await service.generateEmbedding('KnowledgeHub document');
+
+  expect(result).toHaveLength(1536);
+  expect(result.every(Number.isFinite)).toBe(true);
+
+  expect(createMock).not.toHaveBeenCalled();
+});
+
+it('should return the correct mock model name', () => {
+  configService.get.mockImplementation((key: string) =>
+    key === 'EMBEDDINGS_PROVIDER' ? 'mock' : undefined,
+  );
+
+  expect(service.getModelName()).toBe('mock-sha256-1536');
+});
+
 });

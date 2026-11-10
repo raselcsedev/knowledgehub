@@ -1,4 +1,3 @@
-
 import {
   BadRequestException,
   Injectable,
@@ -31,9 +30,7 @@ export class EmbeddingsService {
     }
 
     if (provider !== 'openai') {
-      throw new InternalServerErrorException(
-        'Unsupported embedding provider',
-      );
+      throw new InternalServerErrorException('Unsupported embedding provider');
     }
 
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
@@ -83,9 +80,7 @@ export class EmbeddingsService {
     let counter = 0;
 
     while (embedding.length < this.dimensions) {
-      const hash = createHash('sha256')
-        .update(`${text}:${counter}`)
-        .digest();
+      const hash = createHash('sha256').update(`${text}:${counter}`).digest();
 
       for (let offset = 0; offset < hash.length; offset += 4) {
         const value = hash.readUInt32BE(offset);
@@ -107,5 +102,12 @@ export class EmbeddingsService {
     );
 
     return embedding.map((value) => value / magnitude);
+  }
+
+  getModelName(): string {
+    const provider =
+      this.configService.get<string>('EMBEDDINGS_PROVIDER') ?? 'openai';
+
+    return provider === 'mock' ? 'mock-sha256-1536' : this.model;
   }
 }

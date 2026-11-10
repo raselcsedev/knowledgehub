@@ -26,63 +26,61 @@ export class DocumentsService {
     // Return embedding information
   }
  
-async generateDocumentEmbedding(
-  documentId: string,
-  userId: string,
-) {
+async generateDocumentEmbedding(documentId: string, userId: string) {
   const document = await this.prisma.document.findFirst({
-    where: {
-      id: documentId,
-      userId,
-    },
-    select: {
-      id: true,
-      title: true,
-    },
+    where: { id: documentId, userId },
+    select: { id: true, title: true },
   });
 
   if (!document) {
     throw new NotFoundException('Document not found');
   }
 
-  // Retrieve all document chunks.
   const chunks = await this.prisma.documentChunk.findMany({
-    where: {
-      documentId: document.id,
-    },
-    orderBy: {
-      chunkIndex: 'asc',
-    },
+    where: { documentId: document.id },
+    orderBy: { chunkIndex: 'asc' },
   });
 
   if (chunks.length === 0) {
     throw new NotFoundException('No chunks found for this document');
   }
 
-  // Generate an embedding for every chunk.
   const results = [];
 
   for (const chunk of chunks) {
+    // Generate embedding
     const embedding = await this.embeddingsService.generateEmbedding(
       chunk.content,
     );
+
+    // Persist embedding in PostgreSQL JSONB
+    await this.prisma.documentChunk.update({
+      where: { id: chunk.id },
+      data: {
+        embedding,
+        embeddingModel: this.embeddingsService.getModelName(),
+        embeddedAt: new Date(),
+      },
+    });
 
     results.push({
       chunkId: chunk.id,
       chunkIndex: chunk.chunkIndex,
       dimensions: embedding.length,
+      stored: true,
       preview: embedding.slice(0, 5),
     });
   }
 
   return {
-    message: 'Document embeddings generated successfully',
+    message: 'Document embeddings generated and stored successfully',
     document: {
       id: document.id,
       title: document.title,
     },
     totalChunks: chunks.length,
     processedChunks: results.length,
+    storedChunks: results.filter((item) => item.stored).length,
     embeddings: results,
   };
 }

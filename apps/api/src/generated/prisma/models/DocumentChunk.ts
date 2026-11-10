@@ -41,6 +41,8 @@ export type DocumentChunkMinAggregateOutputType = {
   content: string | null
   chunkIndex: number | null
   charCount: number | null
+  embeddingModel: string | null
+  embeddedAt: Date | null
   documentId: string | null
   createdAt: Date | null
 }
@@ -50,6 +52,8 @@ export type DocumentChunkMaxAggregateOutputType = {
   content: string | null
   chunkIndex: number | null
   charCount: number | null
+  embeddingModel: string | null
+  embeddedAt: Date | null
   documentId: string | null
   createdAt: Date | null
 }
@@ -59,6 +63,9 @@ export type DocumentChunkCountAggregateOutputType = {
   content: number
   chunkIndex: number
   charCount: number
+  embedding: number
+  embeddingModel: number
+  embeddedAt: number
   documentId: number
   createdAt: number
   _all: number
@@ -80,6 +87,8 @@ export type DocumentChunkMinAggregateInputType = {
   content?: true
   chunkIndex?: true
   charCount?: true
+  embeddingModel?: true
+  embeddedAt?: true
   documentId?: true
   createdAt?: true
 }
@@ -89,6 +98,8 @@ export type DocumentChunkMaxAggregateInputType = {
   content?: true
   chunkIndex?: true
   charCount?: true
+  embeddingModel?: true
+  embeddedAt?: true
   documentId?: true
   createdAt?: true
 }
@@ -98,6 +109,9 @@ export type DocumentChunkCountAggregateInputType = {
   content?: true
   chunkIndex?: true
   charCount?: true
+  embedding?: true
+  embeddingModel?: true
+  embeddedAt?: true
   documentId?: true
   createdAt?: true
   _all?: true
@@ -194,6 +208,9 @@ export type DocumentChunkGroupByOutputType = {
   content: string
   chunkIndex: number
   charCount: number
+  embedding: runtime.JsonValue | null
+  embeddingModel: string | null
+  embeddedAt: Date | null
   documentId: string
   createdAt: Date
   _count: DocumentChunkCountAggregateOutputType | null
@@ -226,6 +243,9 @@ export type DocumentChunkWhereInput = {
   content?: Prisma.StringFilter<"DocumentChunk"> | string
   chunkIndex?: Prisma.IntFilter<"DocumentChunk"> | number
   charCount?: Prisma.IntFilter<"DocumentChunk"> | number
+  embedding?: Prisma.JsonNullableFilter<"DocumentChunk">
+  embeddingModel?: Prisma.StringNullableFilter<"DocumentChunk"> | string | null
+  embeddedAt?: Prisma.DateTimeNullableFilter<"DocumentChunk"> | Date | string | null
   documentId?: Prisma.StringFilter<"DocumentChunk"> | string
   createdAt?: Prisma.DateTimeFilter<"DocumentChunk"> | Date | string
   document?: Prisma.XOR<Prisma.DocumentScalarRelationFilter, Prisma.DocumentWhereInput>
@@ -236,6 +256,9 @@ export type DocumentChunkOrderByWithRelationInput = {
   content?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   charCount?: Prisma.SortOrder
+  embedding?: Prisma.SortOrderInput | Prisma.SortOrder
+  embeddingModel?: Prisma.SortOrderInput | Prisma.SortOrder
+  embeddedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   documentId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   document?: Prisma.DocumentOrderByWithRelationInput
@@ -250,6 +273,9 @@ export type DocumentChunkWhereUniqueInput = Prisma.AtLeast<{
   content?: Prisma.StringFilter<"DocumentChunk"> | string
   chunkIndex?: Prisma.IntFilter<"DocumentChunk"> | number
   charCount?: Prisma.IntFilter<"DocumentChunk"> | number
+  embedding?: Prisma.JsonNullableFilter<"DocumentChunk">
+  embeddingModel?: Prisma.StringNullableFilter<"DocumentChunk"> | string | null
+  embeddedAt?: Prisma.DateTimeNullableFilter<"DocumentChunk"> | Date | string | null
   documentId?: Prisma.StringFilter<"DocumentChunk"> | string
   createdAt?: Prisma.DateTimeFilter<"DocumentChunk"> | Date | string
   document?: Prisma.XOR<Prisma.DocumentScalarRelationFilter, Prisma.DocumentWhereInput>
@@ -260,6 +286,9 @@ export type DocumentChunkOrderByWithAggregationInput = {
   content?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   charCount?: Prisma.SortOrder
+  embedding?: Prisma.SortOrderInput | Prisma.SortOrder
+  embeddingModel?: Prisma.SortOrderInput | Prisma.SortOrder
+  embeddedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   documentId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.DocumentChunkCountOrderByAggregateInput
@@ -277,6 +306,9 @@ export type DocumentChunkScalarWhereWithAggregatesInput = {
   content?: Prisma.StringWithAggregatesFilter<"DocumentChunk"> | string
   chunkIndex?: Prisma.IntWithAggregatesFilter<"DocumentChunk"> | number
   charCount?: Prisma.IntWithAggregatesFilter<"DocumentChunk"> | number
+  embedding?: Prisma.JsonNullableWithAggregatesFilter<"DocumentChunk">
+  embeddingModel?: Prisma.StringNullableWithAggregatesFilter<"DocumentChunk"> | string | null
+  embeddedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"DocumentChunk"> | Date | string | null
   documentId?: Prisma.StringWithAggregatesFilter<"DocumentChunk"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"DocumentChunk"> | Date | string
 }
@@ -286,6 +318,9 @@ export type DocumentChunkCreateInput = {
   content: string
   chunkIndex: number
   charCount: number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: string | null
+  embeddedAt?: Date | string | null
   createdAt?: Date | string
   document: Prisma.DocumentCreateNestedOneWithoutChunksInput
 }
@@ -295,6 +330,9 @@ export type DocumentChunkUncheckedCreateInput = {
   content: string
   chunkIndex: number
   charCount: number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: string | null
+  embeddedAt?: Date | string | null
   documentId: string
   createdAt?: Date | string
 }
@@ -304,6 +342,9 @@ export type DocumentChunkUpdateInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   charCount?: Prisma.IntFieldUpdateOperationsInput | number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  embeddedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   document?: Prisma.DocumentUpdateOneRequiredWithoutChunksNestedInput
 }
@@ -313,6 +354,9 @@ export type DocumentChunkUncheckedUpdateInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   charCount?: Prisma.IntFieldUpdateOperationsInput | number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  embeddedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   documentId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -322,6 +366,9 @@ export type DocumentChunkCreateManyInput = {
   content: string
   chunkIndex: number
   charCount: number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: string | null
+  embeddedAt?: Date | string | null
   documentId: string
   createdAt?: Date | string
 }
@@ -331,6 +378,9 @@ export type DocumentChunkUpdateManyMutationInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   charCount?: Prisma.IntFieldUpdateOperationsInput | number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  embeddedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -339,6 +389,9 @@ export type DocumentChunkUncheckedUpdateManyInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   charCount?: Prisma.IntFieldUpdateOperationsInput | number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  embeddedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   documentId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -363,6 +416,9 @@ export type DocumentChunkCountOrderByAggregateInput = {
   content?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   charCount?: Prisma.SortOrder
+  embedding?: Prisma.SortOrder
+  embeddingModel?: Prisma.SortOrder
+  embeddedAt?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -377,6 +433,8 @@ export type DocumentChunkMaxOrderByAggregateInput = {
   content?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   charCount?: Prisma.SortOrder
+  embeddingModel?: Prisma.SortOrder
+  embeddedAt?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -386,6 +444,8 @@ export type DocumentChunkMinOrderByAggregateInput = {
   content?: Prisma.SortOrder
   chunkIndex?: Prisma.SortOrder
   charCount?: Prisma.SortOrder
+  embeddingModel?: Prisma.SortOrder
+  embeddedAt?: Prisma.SortOrder
   documentId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -442,6 +502,9 @@ export type DocumentChunkCreateWithoutDocumentInput = {
   content: string
   chunkIndex: number
   charCount: number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: string | null
+  embeddedAt?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -450,6 +513,9 @@ export type DocumentChunkUncheckedCreateWithoutDocumentInput = {
   content: string
   chunkIndex: number
   charCount: number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: string | null
+  embeddedAt?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -487,6 +553,9 @@ export type DocumentChunkScalarWhereInput = {
   content?: Prisma.StringFilter<"DocumentChunk"> | string
   chunkIndex?: Prisma.IntFilter<"DocumentChunk"> | number
   charCount?: Prisma.IntFilter<"DocumentChunk"> | number
+  embedding?: Prisma.JsonNullableFilter<"DocumentChunk">
+  embeddingModel?: Prisma.StringNullableFilter<"DocumentChunk"> | string | null
+  embeddedAt?: Prisma.DateTimeNullableFilter<"DocumentChunk"> | Date | string | null
   documentId?: Prisma.StringFilter<"DocumentChunk"> | string
   createdAt?: Prisma.DateTimeFilter<"DocumentChunk"> | Date | string
 }
@@ -496,6 +565,9 @@ export type DocumentChunkCreateManyDocumentInput = {
   content: string
   chunkIndex: number
   charCount: number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: string | null
+  embeddedAt?: Date | string | null
   createdAt?: Date | string
 }
 
@@ -504,6 +576,9 @@ export type DocumentChunkUpdateWithoutDocumentInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   charCount?: Prisma.IntFieldUpdateOperationsInput | number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  embeddedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -512,6 +587,9 @@ export type DocumentChunkUncheckedUpdateWithoutDocumentInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   charCount?: Prisma.IntFieldUpdateOperationsInput | number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  embeddedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -520,6 +598,9 @@ export type DocumentChunkUncheckedUpdateManyWithoutDocumentInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
   chunkIndex?: Prisma.IntFieldUpdateOperationsInput | number
   charCount?: Prisma.IntFieldUpdateOperationsInput | number
+  embedding?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  embeddingModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  embeddedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -530,6 +611,9 @@ export type DocumentChunkSelect<ExtArgs extends runtime.Types.Extensions.Interna
   content?: boolean
   chunkIndex?: boolean
   charCount?: boolean
+  embedding?: boolean
+  embeddingModel?: boolean
+  embeddedAt?: boolean
   documentId?: boolean
   createdAt?: boolean
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -540,6 +624,9 @@ export type DocumentChunkSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   content?: boolean
   chunkIndex?: boolean
   charCount?: boolean
+  embedding?: boolean
+  embeddingModel?: boolean
+  embeddedAt?: boolean
   documentId?: boolean
   createdAt?: boolean
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -550,6 +637,9 @@ export type DocumentChunkSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   content?: boolean
   chunkIndex?: boolean
   charCount?: boolean
+  embedding?: boolean
+  embeddingModel?: boolean
+  embeddedAt?: boolean
   documentId?: boolean
   createdAt?: boolean
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
@@ -560,11 +650,14 @@ export type DocumentChunkSelectScalar = {
   content?: boolean
   chunkIndex?: boolean
   charCount?: boolean
+  embedding?: boolean
+  embeddingModel?: boolean
+  embeddedAt?: boolean
   documentId?: boolean
   createdAt?: boolean
 }
 
-export type DocumentChunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "content" | "chunkIndex" | "charCount" | "documentId" | "createdAt", ExtArgs["result"]["documentChunk"]>
+export type DocumentChunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "content" | "chunkIndex" | "charCount" | "embedding" | "embeddingModel" | "embeddedAt" | "documentId" | "createdAt", ExtArgs["result"]["documentChunk"]>
 export type DocumentChunkInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   document?: boolean | Prisma.DocumentDefaultArgs<ExtArgs>
 }
@@ -585,6 +678,9 @@ export type $DocumentChunkPayload<ExtArgs extends runtime.Types.Extensions.Inter
     content: string
     chunkIndex: number
     charCount: number
+    embedding: runtime.JsonValue | null
+    embeddingModel: string | null
+    embeddedAt: Date | null
     documentId: string
     createdAt: Date
   }, ExtArgs["result"]["documentChunk"]>
@@ -1015,6 +1111,9 @@ export interface DocumentChunkFieldRefs {
   readonly content: Prisma.FieldRef<"DocumentChunk", 'String'>
   readonly chunkIndex: Prisma.FieldRef<"DocumentChunk", 'Int'>
   readonly charCount: Prisma.FieldRef<"DocumentChunk", 'Int'>
+  readonly embedding: Prisma.FieldRef<"DocumentChunk", 'Json'>
+  readonly embeddingModel: Prisma.FieldRef<"DocumentChunk", 'String'>
+  readonly embeddedAt: Prisma.FieldRef<"DocumentChunk", 'DateTime'>
   readonly documentId: Prisma.FieldRef<"DocumentChunk", 'String'>
   readonly createdAt: Prisma.FieldRef<"DocumentChunk", 'DateTime'>
 }

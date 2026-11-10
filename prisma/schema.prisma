@@ -72,6 +72,11 @@ model DocumentChunk {
   content    String   @db.Text
   chunkIndex Int
   charCount  Int
+  
+  // Embedding storage
+  embedding      Json?    @db.JsonB
+  embeddingModel String?
+  embeddedAt     DateTime?
 
   documentId String
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)

@@ -331,7 +331,7 @@ function DocumentDetailsContent() {
         </div>
 
         {document.extractedText ? (
-          <div className="max-h-[500px] overflow-y-auto rounded-xl bg-slate-50 p-5 text-sm leading-7 text-slate-700">
+          <div className="max-h-125 overflow-y-auto rounded-xl bg-slate-50 p-5 text-sm leading-7 text-slate-700">
             <pre className="whitespace-pre-wrap font-sans">
               {document.extractedText}
             </pre>

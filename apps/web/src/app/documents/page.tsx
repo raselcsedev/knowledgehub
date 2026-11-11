@@ -454,9 +454,12 @@ export default function DocumentsPage() {
                           <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600">
                             <FileText size={19} />
                           </div>
-                          <span className="text-sm font-medium text-slate-800">
+                          <Link
+                            href={`/documents/${doc.id}`}
+                            className="font-medium text-foreground hover:text-primary hover:underline"
+                          >
                             {doc.name}
-                          </span>
+                          </Link>
                         </div>
                       </td>
 

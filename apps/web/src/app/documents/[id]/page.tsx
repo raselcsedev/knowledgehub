@@ -407,7 +407,7 @@ function InfoCard({
         {icon}
         <span className="text-sm text-slate-500">{label}</span>
       </div>
-      <p className="break-words text-sm font-semibold text-slate-900">
+      <p className="wrap-break-word text-sm font-semibold text-slate-900">
         {value}
       </p>
     </div>

@@ -19,6 +19,7 @@ describe('DocumentsService', () => {
       update: jest.fn(),
     },
   };
+
   const embeddingsMock = {
     generateEmbedding: jest.fn(),
     getModelName: jest.fn().mockReturnValue('mock-sha256-1536'),
@@ -48,115 +49,10 @@ describe('DocumentsService', () => {
         },
         {
           provide: EmbeddingsService,
-          useValue: {
-            generateEmbedding: jest.fn(),
-            getModelName: jest.fn().mockReturnValue('mock-sha256-1536'),
-          },
-        },
-        {
-          provide: EmbeddingsService,
           useValue: embeddingsMock,
         },
       ],
     }).compile();
-    describe('generateDocumentEmbedding', () => {
-      const documentId = 'document-123';
-      const userId = 'user-123';
-
-      const document = {
-        id: documentId,
-        title: 'Writing - July',
-      };
-
-      const chunks = [
-        {
-          id: 'chunk-1',
-          content: 'First chunk content',
-          chunkIndex: 0,
-        },
-        {
-          id: 'chunk-2',
-          content: 'Second chunk content',
-          chunkIndex: 1,
-        },
-      ];
-
-      const mockEmbedding = Array(1536).fill(0.25);
-
-      beforeEach(() => {
-        prismaMock.document.findFirst.mockResolvedValue(document);
-        prismaMock.documentChunk.findMany.mockResolvedValue(chunks);
-        prismaMock.documentChunk.update.mockResolvedValue({});
-        embeddingsMock.generateEmbedding.mockResolvedValue(mockEmbedding);
-      });
-
-      it('should generate and persist embeddings for every chunk', async () => {
-        const result = await service.generateDocumentEmbedding(
-          documentId,
-          userId,
-        );
-
-        expect(embeddingsMock.generateEmbedding).toHaveBeenCalledTimes(2);
-
-        expect(prismaMock.documentChunk.update).toHaveBeenCalledTimes(2);
-
-        expect(prismaMock.documentChunk.update).toHaveBeenNthCalledWith(1, {
-          where: { id: 'chunk-1' },
-          data: {
-            embedding: mockEmbedding,
-            embeddingModel: 'mock-sha256-1536',
-            embeddedAt: expect.any(Date),
-          },
-        });
-
-        expect(prismaMock.documentChunk.update).toHaveBeenNthCalledWith(2, {
-          where: { id: 'chunk-2' },
-          data: {
-            embedding: mockEmbedding,
-            embeddingModel: 'mock-sha256-1536',
-            embeddedAt: expect.any(Date),
-          },
-        });
-
-        expect(result.totalChunks).toBe(2);
-        expect(result.processedChunks).toBe(2);
-        expect(result.storedChunks).toBe(2);
-        expect(result.embeddings.every((item) => item.stored)).toBe(true);
-      });
-
-      it('should reject if the document does not belong to the user', async () => {
-        prismaMock.document.findFirst.mockResolvedValue(null);
-
-        await expect(
-          service.generateDocumentEmbedding(documentId, userId),
-        ).rejects.toThrow(NotFoundException);
-
-        expect(prismaMock.documentChunk.findMany).not.toHaveBeenCalled();
-        expect(embeddingsMock.generateEmbedding).not.toHaveBeenCalled();
-      });
-
-      it('should reject if the document has no chunks', async () => {
-        prismaMock.documentChunk.findMany.mockResolvedValue([]);
-
-        await expect(
-          service.generateDocumentEmbedding(documentId, userId),
-        ).rejects.toThrow(NotFoundException);
-
-        expect(embeddingsMock.generateEmbedding).not.toHaveBeenCalled();
-      });
-
-      it('should not report success if embedding generation fails', async () => {
-        embeddingsMock.generateEmbedding.mockRejectedValue(
-          new Error('Embedding generation failed'),
-        );
-
-        await expect(
-          service.generateDocumentEmbedding(documentId, userId),
-        ).rejects.toThrow('Embedding generation failed');
-
-        expect(prismaMock.documentChunk.update).not.toHaveBeenCalled();
-      });
-    });
 
     service = module.get<DocumentsService>(DocumentsService);
   });
@@ -216,12 +112,23 @@ describe('DocumentsService', () => {
           content: true,
           chunkIndex: true,
           charCount: true,
+          embeddingModel: true,
+          embeddedAt: true,
           createdAt: true,
         },
       });
 
       expect(result.chunkCount).toBe(2);
-      expect(result.chunks).toEqual(chunks);
+      expect(result.chunks).toEqual([
+        {
+          ...chunks[0],
+          hasEmbedding: true,
+        },
+        {
+          ...chunks[1],
+          hasEmbedding: true,
+        },
+      ]);
       expect(result.document).toEqual(document);
     });
 
@@ -247,6 +154,105 @@ describe('DocumentsService', () => {
 
       expect(result.chunkCount).toBe(0);
       expect(result.chunks).toEqual([]);
+    });
+  });
+
+  describe('generateDocumentEmbedding', () => {
+    const documentId = 'document-123';
+    const userId = 'user-123';
+
+    const document = {
+      id: documentId,
+      title: 'Writing - July',
+    };
+
+    const chunks = [
+      {
+        id: 'chunk-1',
+        content: 'First chunk content',
+        chunkIndex: 0,
+      },
+      {
+        id: 'chunk-2',
+        content: 'Second chunk content',
+        chunkIndex: 1,
+      },
+    ];
+
+    const mockEmbedding = Array(1536).fill(0.25);
+
+    beforeEach(() => {
+      prismaMock.document.findFirst.mockResolvedValue(document);
+      prismaMock.documentChunk.findMany.mockResolvedValue(chunks);
+      prismaMock.documentChunk.update.mockResolvedValue({});
+      embeddingsMock.generateEmbedding.mockResolvedValue(mockEmbedding);
+    });
+
+    it('should generate and persist embeddings for every chunk', async () => {
+      const result = await service.generateDocumentEmbedding(
+        documentId,
+        userId,
+      );
+
+      expect(embeddingsMock.generateEmbedding).toHaveBeenCalledTimes(2);
+
+      expect(prismaMock.documentChunk.update).toHaveBeenCalledTimes(2);
+
+      expect(prismaMock.documentChunk.update).toHaveBeenNthCalledWith(1, {
+        where: { id: 'chunk-1' },
+        data: {
+          embedding: mockEmbedding,
+          embeddingModel: 'mock-sha256-1536',
+          embeddedAt: expect.any(Date),
+        },
+      });
+
+      expect(prismaMock.documentChunk.update).toHaveBeenNthCalledWith(2, {
+        where: { id: 'chunk-2' },
+        data: {
+          embedding: mockEmbedding,
+          embeddingModel: 'mock-sha256-1536',
+          embeddedAt: expect.any(Date),
+        },
+      });
+
+      expect(result.totalChunks).toBe(2);
+      expect(result.processedChunks).toBe(2);
+      expect(result.storedChunks).toBe(2);
+      expect(result.embeddings.every((item) => item.stored)).toBe(true);
+    });
+
+    it('should reject if the document does not belong to the user', async () => {
+      prismaMock.document.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.generateDocumentEmbedding(documentId, userId),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prismaMock.documentChunk.findMany).not.toHaveBeenCalled();
+      expect(embeddingsMock.generateEmbedding).not.toHaveBeenCalled();
+    });
+
+    it('should reject if the document has no chunks', async () => {
+      prismaMock.documentChunk.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.generateDocumentEmbedding(documentId, userId),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(embeddingsMock.generateEmbedding).not.toHaveBeenCalled();
+    });
+
+    it('should not report success if embedding generation fails', async () => {
+      embeddingsMock.generateEmbedding.mockRejectedValue(
+        new Error('Embedding generation failed'),
+      );
+
+      await expect(
+        service.generateDocumentEmbedding(documentId, userId),
+      ).rejects.toThrow('Embedding generation failed');
+
+      expect(prismaMock.documentChunk.update).not.toHaveBeenCalled();
     });
   });
 });

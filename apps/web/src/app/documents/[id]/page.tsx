@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -22,6 +21,12 @@ import { apiRequest } from "@/lib/api";
 
 type DocumentStatus = "UPLOADED" | "PROCESSING" | "READY" | "FAILED";
 
+type EmbeddingStatus =
+  | "NOT_AVAILABLE"
+  | "NOT_EMBEDDED"
+  | "PARTIAL"
+  | "COMPLETED";
+
 type ApiDocument = {
   id: string;
   title: string;
@@ -33,6 +38,9 @@ type ApiDocument = {
   processedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  chunkCount: number;
+  embeddedChunkCount: number;
+  embeddingStatus: EmbeddingStatus;
 };
 
 type DocumentResponse = {
@@ -46,6 +54,9 @@ type DocumentChunk = {
   chunkIndex: number;
   charCount: number;
   createdAt: string;
+  embeddingModel: string | null;
+  embeddedAt: string | null;
+  hasEmbedding: boolean;
 };
 
 type ChunksResponse = {
@@ -88,6 +99,28 @@ function getStatusStyle(status: DocumentStatus): string {
   return styles[status];
 }
 
+function getEmbeddingStatusStyle(status: EmbeddingStatus): string {
+  const styles: Record<EmbeddingStatus, string> = {
+    COMPLETED: "bg-emerald-50 text-emerald-700",
+    PARTIAL: "bg-amber-50 text-amber-700",
+    NOT_EMBEDDED: "bg-slate-100 text-slate-600",
+    NOT_AVAILABLE: "bg-red-50 text-red-700",
+  };
+
+  return styles[status];
+}
+
+function getEmbeddingStatusLabel(status: EmbeddingStatus): string {
+  const labels: Record<EmbeddingStatus, string> = {
+    COMPLETED: "Completed",
+    PARTIAL: "Partially embedded",
+    NOT_EMBEDDED: "Not embedded",
+    NOT_AVAILABLE: "Not available",
+  };
+
+  return labels[status];
+}
+
 function DocumentDetailsContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -98,8 +131,7 @@ function DocumentDetailsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEmbedding, setIsEmbedding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [embedResult, setEmbedResult] =
-    useState<EmbedResponse | null>(null);
+  const [embedResult, setEmbedResult] = useState<EmbedResponse | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -121,9 +153,7 @@ function DocumentDetailsContent() {
       } catch (err) {
         if (isMounted) {
           setError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load document.",
+            err instanceof Error ? err.message : "Failed to load document.",
           );
         }
       } finally {
@@ -155,18 +185,23 @@ function DocumentDetailsContent() {
         { method: "POST" },
       );
 
+      // Reload persistent document and chunk metadata.
+      const [documentResponse, chunksResponse] = await Promise.all([
+        apiRequest<DocumentResponse>(`/documents/${documentId}`),
+        apiRequest<ChunksResponse>(`/documents/${documentId}/chunks`),
+      ]);
+
+      setDocument(documentResponse.document);
+      setChunks(chunksResponse.chunks);
       setEmbedResult(result);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to generate embeddings.",
+        err instanceof Error ? err.message : "Failed to generate embeddings.",
       );
     } finally {
       setIsEmbedding(false);
     }
   }
-
   if (isLoading) {
     return (
       <div className="py-24 text-center text-slate-500">
@@ -255,8 +290,8 @@ function DocumentDetailsContent() {
         />
         <InfoCard
           icon={<Layers size={19} />}
-          label="Total chunks"
-          value={String(chunks.length)}
+          label="Embedded chunks"
+          value={`${document.embeddedChunkCount}/${document.chunkCount}`}
         />
       </section>
 
@@ -284,7 +319,39 @@ function DocumentDetailsContent() {
             {isEmbedding ? "Generating..." : "Generate embeddings"}
           </button>
         </div>
+        <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">
+                Embedding status
+              </p>
 
+              <p className="mt-1 text-xs text-slate-500">
+                {document.embeddedChunkCount} of {document.chunkCount} chunks
+                embedded
+              </p>
+            </div>
+
+            <span
+              className={`inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${getEmbeddingStatusStyle(document.embeddingStatus)}`}
+            >
+              {getEmbeddingStatusLabel(document.embeddingStatus)}
+            </span>
+          </div>
+
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-indigo-600 transition-all"
+              style={{
+                width: `${
+                  document.chunkCount > 0
+                    ? (document.embeddedChunkCount / document.chunkCount) * 100
+                    : 0
+                }%`,
+              }}
+            />
+          </div>
+        </div>
         {chunks.length === 0 && (
           <p className="text-sm text-slate-500">
             No chunks are available for this document.
@@ -322,9 +389,7 @@ function DocumentDetailsContent() {
 
       <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-900">
-            Extracted text
-          </h2>
+          <h2 className="text-lg font-bold text-slate-900">Extracted text</h2>
           <p className="mt-1 text-sm text-slate-500">
             Text extracted from the original document.
           </p>
@@ -345,9 +410,7 @@ function DocumentDetailsContent() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-5">
-          <h2 className="text-lg font-bold text-slate-900">
-            Document chunks
-          </h2>
+          <h2 className="text-lg font-bold text-slate-900">Document chunks</h2>
           <p className="mt-1 text-sm text-slate-500">
             The extracted text is divided into smaller sections for retrieval.
           </p>
@@ -369,9 +432,27 @@ function DocumentDetailsContent() {
                     <p className="font-semibold text-slate-800">
                       Chunk {chunk.chunkIndex + 1}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {chunk.charCount} characters
-                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-slate-500">
+                        {chunk.charCount} characters
+                      </span>
+
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${
+                          chunk.hasEmbedding
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {chunk.hasEmbedding ? "Embedded" : "Not embedded"}
+                      </span>
+                    </div>
+
+                    {chunk.embeddingModel && (
+                      <p className="mt-1 text-xs text-slate-400">
+                        Model: {chunk.embeddingModel}
+                      </p>
+                    )}
                   </div>
                   <span className="text-sm text-indigo-600 group-open:rotate-180">
                     ▼

@@ -58,7 +58,10 @@ export class EmbeddingsService {
 
       return embedding;
     } catch (error: unknown) {
-      if (error instanceof OpenAI.APIError) {
+      if (
+        typeof OpenAI.APIError === 'function' &&
+        error instanceof OpenAI.APIError
+      ) {
         console.error('OpenAI API Error:', {
           status: error.status,
           code: error.code,

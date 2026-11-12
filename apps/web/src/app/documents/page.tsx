@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -25,6 +24,12 @@ type DocumentStatus = "Uploaded" | "Ready" | "Processing" | "Failed";
 
 type ApiDocumentStatus = "UPLOADED" | "READY" | "PROCESSING" | "FAILED";
 
+type EmbeddingStatus =
+  | "NOT_AVAILABLE"
+  | "NOT_EMBEDDED"
+  | "PARTIAL"
+  | "COMPLETED";
+
 type DocumentItem = {
   id: string;
   name: string;
@@ -32,6 +37,9 @@ type DocumentItem = {
   size: string;
   uploadedAt: string;
   status: DocumentStatus;
+  chunkCount: number;
+  embeddedChunkCount: number;
+  embeddingStatus: EmbeddingStatus;
 };
 
 type ApiDocument = {
@@ -42,6 +50,9 @@ type ApiDocument = {
   sizeBytes: number;
   status: ApiDocumentStatus;
   createdAt: string;
+  chunkCount: number;
+  embeddedChunkCount: number;
+  embeddingStatus: EmbeddingStatus;
 };
 
 type DocumentsResponse = {
@@ -82,6 +93,9 @@ function mapApiDocument(doc: ApiDocument): DocumentItem {
     size: formatFileSize(doc.sizeBytes),
     uploadedAt: new Date(doc.createdAt).toLocaleDateString(),
     status: mapDocumentStatus(doc.status),
+    chunkCount: doc.chunkCount,
+    embeddedChunkCount: doc.embeddedChunkCount,
+    embeddingStatus: doc.embeddingStatus,
   };
 }
 
@@ -146,17 +160,13 @@ export default function DocumentsPage() {
   }, [documents, search, activeFilter]);
 
   // Dashboard statistics.
-  const readyCount = documents.filter(
-    (doc) => doc.status === "Ready",
-  ).length;
+  const readyCount = documents.filter((doc) => doc.status === "Ready").length;
 
   const processingCount = documents.filter(
     (doc) => doc.status === "Processing",
   ).length;
 
-  const failedCount = documents.filter(
-    (doc) => doc.status === "Failed",
-  ).length;
+  const failedCount = documents.filter((doc) => doc.status === "Failed").length;
 
   // Handle file selection.
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -169,9 +179,7 @@ export default function DocumentsPage() {
 
     const validExtensions = [".pdf", ".docx"];
 
-    const extension = file.name
-      .slice(file.name.lastIndexOf("."))
-      .toLowerCase();
+    const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
 
     if (!validExtensions.includes(extension)) {
       setError("Only PDF and DOCX files are supported.");
@@ -241,9 +249,7 @@ export default function DocumentsPage() {
         method: "DELETE",
       });
 
-      setDocuments((current) =>
-        current.filter((doc) => doc.id !== deleteId),
-      );
+      setDocuments((current) => current.filter((doc) => doc.id !== deleteId));
 
       setDeleteId(null);
       setSuccess("Document deleted successfully.");
@@ -282,6 +288,32 @@ export default function DocumentsPage() {
     }
   }
 
+  function getEmbeddingStatusStyle(status: EmbeddingStatus) {
+    switch (status) {
+      case "COMPLETED":
+        return "bg-emerald-50 text-emerald-700";
+      case "PARTIAL":
+        return "bg-amber-50 text-amber-700";
+      case "NOT_EMBEDDED":
+        return "bg-slate-100 text-slate-600";
+      case "NOT_AVAILABLE":
+        return "bg-red-50 text-red-700";
+    }
+  }
+
+  function getEmbeddingStatusLabel(status: EmbeddingStatus) {
+    switch (status) {
+      case "COMPLETED":
+        return "Embedded";
+      case "PARTIAL":
+        return "Partially embedded";
+      case "NOT_EMBEDDED":
+        return "Not embedded";
+      case "NOT_AVAILABLE":
+        return "No chunks";
+    }
+  }
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-[#f7f8fc] px-4 py-6 sm:px-6 lg:px-10">
@@ -312,7 +344,11 @@ export default function DocumentsPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Upload size={17} />
-                {uploading ? "Uploading..." : "Upload Document"}
+                {uploading
+                  ? "Uploading..."
+                  : selectedFile
+                    ? "Upload Document"
+                    : "Select a file first"}
               </button>
             </div>
           </div>
@@ -493,6 +529,7 @@ export default function DocumentsPage() {
                     <th className="px-6 py-4 font-semibold">Size</th>
                     <th className="px-6 py-4 font-semibold">Uploaded</th>
                     <th className="px-6 py-4 font-semibold">Status</th>
+                    <th className="px-6 py-4 font-semibold">Embeddings</th>
                     <th className="px-6 py-4 text-right font-semibold">
                       Action
                     </th>
@@ -513,10 +550,7 @@ export default function DocumentsPage() {
 
                   {!isLoading &&
                     filteredDocuments.map((doc) => (
-                      <tr
-                        key={doc.id}
-                        className="transition hover:bg-slate-50"
-                      >
+                      <tr key={doc.id} className="transition hover:bg-slate-50">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600">
@@ -551,6 +585,19 @@ export default function DocumentsPage() {
                             {getStatusIcon(doc.status)}
                             {doc.status}
                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-1.5">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getEmbeddingStatusStyle(doc.embeddingStatus)}`}
+                            >
+                              {getEmbeddingStatusLabel(doc.embeddingStatus)}
+                            </span>
+
+                            <p className="text-xs text-slate-500">
+                              {doc.embeddedChunkCount}/{doc.chunkCount} chunks
+                            </p>
+                          </div>
                         </td>
 
                         <td className="px-6 py-4 text-right">
@@ -612,6 +659,18 @@ export default function DocumentsPage() {
                         {getStatusIcon(doc.status)}
                         {doc.status}
                       </span>
+                      <div className="mt-2">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-1 text-xs ${getEmbeddingStatusStyle(doc.embeddingStatus)}`}
+                        >
+                          {getEmbeddingStatusLabel(doc.embeddingStatus)}
+                        </span>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          {doc.embeddedChunkCount}/{doc.chunkCount} chunks
+                          embedded
+                        </p>
+                      </div>
                     </div>
 
                     <button
@@ -710,9 +769,7 @@ function StatCard({
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-500">{label}</p>
 
-        <div className={`rounded-xl p-2.5 ${styles[color]}`}>
-          {icon}
-        </div>
+        <div className={`rounded-xl p-2.5 ${styles[color]}`}>{icon}</div>
       </div>
 
       <p className="mt-4 text-3xl font-bold text-slate-900">{value}</p>

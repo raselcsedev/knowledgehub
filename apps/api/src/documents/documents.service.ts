@@ -25,66 +25,65 @@ export class DocumentsService {
     // Generate embeddings
     // Return embedding information
   }
- 
-async generateDocumentEmbedding(documentId: string, userId: string) {
-  const document = await this.prisma.document.findFirst({
-    where: { id: documentId, userId },
-    select: { id: true, title: true },
-  });
 
-  if (!document) {
-    throw new NotFoundException('Document not found');
-  }
+  async generateDocumentEmbedding(documentId: string, userId: string) {
+    const document = await this.prisma.document.findFirst({
+      where: { id: documentId, userId },
+      select: { id: true, title: true },
+    });
 
-  const chunks = await this.prisma.documentChunk.findMany({
-    where: { documentId: document.id },
-    orderBy: { chunkIndex: 'asc' },
-  });
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
 
-  if (chunks.length === 0) {
-    throw new NotFoundException('No chunks found for this document');
-  }
+    const chunks = await this.prisma.documentChunk.findMany({
+      where: { documentId: document.id },
+      orderBy: { chunkIndex: 'asc' },
+    });
 
-  const results = [];
+    if (chunks.length === 0) {
+      throw new NotFoundException('No chunks found for this document');
+    }
 
-  for (const chunk of chunks) {
-    // Generate embedding
-    const embedding = await this.embeddingsService.generateEmbedding(
-      chunk.content,
-    );
+    const results = [];
 
-    // Persist embedding in PostgreSQL JSONB
-    await this.prisma.documentChunk.update({
-      where: { id: chunk.id },
-      data: {
-        embedding,
-        embeddingModel: this.embeddingsService.getModelName(),
-        embeddedAt: new Date(),
+    for (const chunk of chunks) {
+      // Generate embedding
+      const embedding = await this.embeddingsService.generateEmbedding(
+        chunk.content,
+      );
+
+      // Persist embedding in PostgreSQL JSONB
+      await this.prisma.documentChunk.update({
+        where: { id: chunk.id },
+        data: {
+          embedding,
+          embeddingModel: this.embeddingsService.getModelName(),
+          embeddedAt: new Date(),
+        },
+      });
+
+      results.push({
+        chunkId: chunk.id,
+        chunkIndex: chunk.chunkIndex,
+        dimensions: embedding.length,
+        stored: true,
+        preview: embedding.slice(0, 5),
+      });
+    }
+
+    return {
+      message: 'Document embeddings generated and stored successfully',
+      document: {
+        id: document.id,
+        title: document.title,
       },
-    });
-
-    results.push({
-      chunkId: chunk.id,
-      chunkIndex: chunk.chunkIndex,
-      dimensions: embedding.length,
-      stored: true,
-      preview: embedding.slice(0, 5),
-    });
+      totalChunks: chunks.length,
+      processedChunks: results.length,
+      storedChunks: results.filter((item) => item.stored).length,
+      embeddings: results,
+    };
   }
-
-  return {
-    message: 'Document embeddings generated and stored successfully',
-    document: {
-      id: document.id,
-      title: document.title,
-    },
-    totalChunks: chunks.length,
-    processedChunks: results.length,
-    storedChunks: results.filter((item) => item.stored).length,
-    embeddings: results,
-  };
-}
-
 
   async upload(file: Express.Multer.File, userId: string) {
     let document;
@@ -203,17 +202,65 @@ async generateDocumentEmbedding(documentId: string, userId: string) {
 
   async findAllByUser(userId: string) {
     const documents = await this.prisma.document.findMany({
-      where: {
-        userId,
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        originalName: true,
+        mimeType: true,
+        sizeBytes: true,
+        status: true,
+        processedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            chunks: true,
+          },
+        },
+        chunks: {
+          select: {
+            embeddingModel: true,
+            embeddedAt: true,
+          },
+        },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+    });
+
+    const formattedDocuments = documents.map((document) => {
+      const embeddedChunkCount = document.chunks.filter(
+        (chunk) => chunk.embeddingModel !== null && chunk.embeddedAt !== null,
+      ).length;
+
+      const chunkCount = document._count.chunks;
+
+      return {
+        id: document.id,
+        title: document.title,
+        originalName: document.originalName,
+        mimeType: document.mimeType,
+        sizeBytes: document.sizeBytes,
+        status: document.status,
+        processedAt: document.processedAt,
+        createdAt: document.createdAt,
+        updatedAt: document.updatedAt,
+        chunkCount,
+        embeddedChunkCount,
+        embeddingStatus:
+          chunkCount === 0
+            ? 'NOT_AVAILABLE'
+            : embeddedChunkCount === 0
+              ? 'NOT_EMBEDDED'
+              : embeddedChunkCount === chunkCount
+                ? 'COMPLETED'
+                : 'PARTIAL',
+      };
     });
 
     return {
       message: 'Documents retrieved successfully',
-      documents,
+      documents: formattedDocuments,
     };
   }
 
@@ -231,15 +278,55 @@ async generateDocumentEmbedding(documentId: string, userId: string) {
         id: documentId,
         userId,
       },
+      select: {
+        id: true,
+        title: true,
+        originalName: true,
+        mimeType: true,
+        sizeBytes: true,
+        status: true,
+        extractedText: true,
+        processedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        chunks: {
+          select: {
+            embeddingModel: true,
+            embeddedAt: true,
+          },
+        },
+      },
     });
 
     if (!document) {
       throw new NotFoundException('Document not found');
     }
 
+    const chunkCount = document.chunks.length;
+
+    const embeddedChunkCount = document.chunks.filter(
+      (chunk) => chunk.embeddingModel !== null && chunk.embeddedAt !== null,
+    ).length;
+
+    const embeddingStatus =
+      chunkCount === 0
+        ? 'NOT_AVAILABLE'
+        : embeddedChunkCount === 0
+          ? 'NOT_EMBEDDED'
+          : embeddedChunkCount === chunkCount
+            ? 'COMPLETED'
+            : 'PARTIAL';
+
+    const { chunks, ...documentDetails } = document;
+
     return {
       message: 'Document retrieved successfully',
-      document,
+      document: {
+        ...documentDetails,
+        chunkCount,
+        embeddedChunkCount,
+        embeddingStatus,
+      },
     };
   }
 
@@ -274,6 +361,8 @@ async generateDocumentEmbedding(documentId: string, userId: string) {
         chunkIndex: true,
         charCount: true,
         createdAt: true,
+        embeddingModel: true,
+        embeddedAt: true,
       },
     });
 
@@ -281,7 +370,11 @@ async generateDocumentEmbedding(documentId: string, userId: string) {
       message: 'Document chunks retrieved successfully',
       document,
       chunkCount: chunks.length,
-      chunks,
+      chunks: chunks.map((chunk) => ({
+        ...chunk,
+        hasEmbedding:
+          chunk.embeddingModel !== null && chunk.embeddedAt !== null,
+      })),
     };
   }
 

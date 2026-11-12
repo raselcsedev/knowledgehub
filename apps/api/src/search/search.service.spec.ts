@@ -18,6 +18,22 @@ describe('SearchService', () => {
     getModelName: jest.fn(),
   };
 
+  const createChunk = (
+    id: string,
+    embedding: unknown,
+  ) => ({
+    id,
+    content: `Content for ${id}`,
+    chunkIndex: 0,
+    embedding,
+    embeddingModel: 'mock-sha256-1536',
+    document: {
+      id: 'doc-1',
+      title: 'Document One',
+      originalName: 'one.pdf',
+    },
+  });
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -48,30 +64,8 @@ describe('SearchService', () => {
 
     it('should rank chunks by cosine similarity', async () => {
       prismaMock.documentChunk.findMany.mockResolvedValue([
-        {
-          id: 'chunk-1',
-          content: 'Less similar content',
-          chunkIndex: 0,
-          embedding: [0, 1],
-          embeddingModel: 'mock-sha256-1536',
-          document: {
-            id: 'doc-1',
-            title: 'Document One',
-            originalName: 'one.pdf',
-          },
-        },
-        {
-          id: 'chunk-2',
-          content: 'Most similar content',
-          chunkIndex: 1,
-          embedding: [1, 0],
-          embeddingModel: 'mock-sha256-1536',
-          document: {
-            id: 'doc-1',
-            title: 'Document One',
-            originalName: 'one.pdf',
-          },
-        },
+        createChunk('chunk-1', [0, 1]),
+        createChunk('chunk-2', [1, 0]),
       ]);
 
       const result = await service.search('user-1', {
@@ -87,18 +81,9 @@ describe('SearchService', () => {
 
     it('should apply the requested result limit', async () => {
       prismaMock.documentChunk.findMany.mockResolvedValue(
-        Array.from({ length: 3 }, (_, index) => ({
-          id: `chunk-${index}`,
-          content: `Content ${index}`,
-          chunkIndex: index,
-          embedding: [1, 0],
-          embeddingModel: 'mock-sha256-1536',
-          document: {
-            id: 'doc-1',
-            title: 'Document One',
-            originalName: 'one.pdf',
-          },
-        })),
+        Array.from({ length: 3 }, (_, index) =>
+          createChunk(`chunk-${index}`, [1, 0]),
+        ),
       );
 
       const result = await service.search('user-1', {
@@ -127,6 +112,60 @@ describe('SearchService', () => {
           }),
         }),
       );
+    });
+
+    it.each([
+      ['null embedding', null],
+      ['string embedding', 'invalid-vector'],
+      ['empty embedding', []],
+    ])('should skip chunks with %s', async (_description, embedding) => {
+      prismaMock.documentChunk.findMany.mockResolvedValue([
+        createChunk('invalid-chunk', embedding),
+      ]);
+
+      const result = await service.search('user-1', {
+        query: 'test query',
+      });
+
+      expect(result.totalMatches).toBe(0);
+      expect(result.results).toEqual([]);
+    });
+
+    it('should skip chunks with mismatched vector dimensions', async () => {
+      prismaMock.documentChunk.findMany.mockResolvedValue([
+        createChunk('wrong-dimension', [1]),
+      ]);
+
+      const result = await service.search('user-1', {
+        query: 'test query',
+      });
+
+      expect(result.totalMatches).toBe(0);
+      expect(result.results).toEqual([]);
+    });
+
+    it('should skip chunks with zero-magnitude vectors', async () => {
+      prismaMock.documentChunk.findMany.mockResolvedValue([
+        createChunk('zero-vector', [0, 0]),
+      ]);
+
+      const result = await service.search('user-1', {
+        query: 'test query',
+      });
+
+      expect(result.totalMatches).toBe(0);
+      expect(result.results).toEqual([]);
+    });
+
+    it('should reject an empty search query', async () => {
+      await expect(
+        service.search('user-1', {
+          query: '   ',
+        }),
+      ).rejects.toThrow('Search query cannot be empty');
+
+      expect(embeddingsMock.generateEmbedding).not.toHaveBeenCalled();
+      expect(prismaMock.documentChunk.findMany).not.toHaveBeenCalled();
     });
   });
 });

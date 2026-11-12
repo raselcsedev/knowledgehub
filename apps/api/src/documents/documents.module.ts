@@ -13,5 +13,6 @@ import { EmbeddingsService } from './embeddings.service';
     DocumentChunkingService,
     EmbeddingsService,
   ],
+  exports: [EmbeddingsService],
 })
 export class DocumentsModule {}

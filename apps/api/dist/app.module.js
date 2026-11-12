@@ -14,6 +14,7 @@ const health_module_1 = require("./health/health.module");
 const users_module_1 = require("./users/users.module");
 const auth_module_1 = require("./auth/auth.module");
 const documents_module_1 = require("./documents/documents.module");
+const search_module_1 = require("./search/search.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -29,6 +30,7 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             documents_module_1.DocumentsModule,
+            search_module_1.SearchModule,
         ],
     })
 ], AppModule);

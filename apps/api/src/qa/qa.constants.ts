@@ -1,0 +1,2 @@
+
+export const OPENAI_CLIENT = 'OPENAI_CLIENT';

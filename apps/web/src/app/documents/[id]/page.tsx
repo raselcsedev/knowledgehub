@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Clock3,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 
 import ProtectedRoute from "@/components/auth/protected-route";
@@ -125,7 +126,8 @@ function DocumentDetailsContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const documentId = params.id;
-
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [document, setDocument] = useState<ApiDocument | null>(null);
   const [chunks, setChunks] = useState<DocumentChunk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -202,6 +204,34 @@ function DocumentDetailsContent() {
       setIsEmbedding(false);
     }
   }
+
+  async function handleDeleteDocument() {
+    if (!document || isDeleting) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${document.title}"? This action cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+
+      await apiRequest<{ message: string }>(`/documents/${documentId}`, {
+        method: "DELETE",
+      });
+
+      router.push("/documents");
+      router.refresh();
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Failed to delete document.",
+      );
+      setIsDeleting(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="py-24 text-center text-slate-500">
@@ -254,21 +284,41 @@ function DocumentDetailsContent() {
             </div>
           </div>
 
-          <span
-            className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold ${getStatusStyle(document.status)}`}
-          >
-            {document.status === "READY" && <CheckCircle2 size={16} />}
-            {document.status === "PROCESSING" && <Clock3 size={16} />}
-            {document.status === "UPLOADED" && <Clock3 size={16} />}
-            {document.status === "FAILED" && <AlertCircle size={16} />}
-            {document.status}
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span
+              className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold ${getStatusStyle(document.status)}`}
+            >
+              {document.status === "READY" && <CheckCircle2 size={16} />}
+              {document.status === "PROCESSING" && <Clock3 size={16} />}
+              {document.status === "UPLOADED" && <Clock3 size={16} />}
+              {document.status === "FAILED" && <AlertCircle size={16} />}
+              {document.status}
+            </span>
+
+            <button
+              onClick={handleDeleteDocument}
+              disabled={isDeleting || isEmbedding}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <RefreshCw size={17} className="animate-spin" />
+              ) : (
+                <Trash2 size={17} />
+              )}
+              {isDeleting ? "Deleting..." : "Delete document"}
+            </button>
+          </div>
         </div>
       </div>
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
+        </div>
+      )}
+      {deleteError && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {deleteError}
         </div>
       )}
 

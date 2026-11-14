@@ -23,7 +23,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import ProtectedRoute from "@/components/auth/protected-route";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 
 const documents = [
@@ -68,12 +68,13 @@ const navigation = [
 ];
 
 export default function DashboardPage() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [activeNav, setActiveNav] = useState("Overview");
   const [search, setSearch] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [selectedFile, setSelectedFile] = useState("");
 
-  const router = useRouter();
   const { user, logout } = useAuth();
 
   async function handleLogout() {
@@ -146,7 +147,11 @@ export default function DashboardPage() {
                     key={item.name}
                     href={item.href}
                     onClick={() => setMobileMenu(false)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-indigo-50 hover:text-indigo-700"
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
+                      pathname === item.href
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-slate-500 hover:bg-indigo-50 hover:text-indigo-700"
+                    }`}
                   >
                     <Icon size={19} />
                     {item.name}
@@ -186,7 +191,7 @@ export default function DashboardPage() {
                 Ask questions and get answers directly from your documents.
               </p>
               <button
-                onClick={() => setActiveNav("AI Chat")}
+                onClick={() => router.push("/chat")}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
               >
                 Start chatting <ArrowUpRight size={14} />
@@ -374,7 +379,7 @@ export default function DashboardPage() {
                   answers with relevant sources.
                 </p>
                 <button
-                  onClick={() => setActiveNav("AI Chat")}
+                  onClick={() => router.push("/chat")}
                   className="mt-6 flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50"
                 >
                   Explore AI Chat <ArrowUpRight size={16} />
@@ -407,7 +412,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   <button
-                    onClick={() => setActiveNav("My Documents")}
+                    onClick={() => router.push("/documents")}
                     className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                   >
                     View all

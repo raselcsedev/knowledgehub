@@ -3,7 +3,15 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, Mail, Lock, ArrowRight } from "lucide-react";
+import {
+  Sparkles,
+  Mail,
+  Lock,
+  ArrowRight,
+  Copy,
+  Check,
+  FlaskConical,
+} from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
 
@@ -24,6 +32,31 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const DEMO_EMAIL = "admin@gmail.com";
+  const DEMO_PASSWORD = "12345678";
+
+  const [copiedField, setCopiedField] = useState<"email" | "password" | null>(
+    null,
+  );
+
+  function fillDemoCredentials() {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    setError("");
+  }
+
+  async function copyCredential(value: string, field: "email" | "password") {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+
+      window.setTimeout(() => {
+        setCopiedField((current) => (current === field ? null : current));
+      }, 2000);
+    } catch {
+      setError("Unable to copy. Please copy the credential manually.");
+    }
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -77,7 +110,73 @@ export default function LoginPage() {
             {error}
           </div>
         )}
+        <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/70 p-4">
+          <div className="flex items-center gap-2">
+            <FlaskConical size={18} className="text-indigo-600" />
+            <h3 className="text-sm font-semibold text-indigo-900">
+              Try KnowledgeHub Demo
+            </h3>
+          </div>
 
+          <p className="mt-1 text-xs text-slate-600">
+            Use the demo account to explore the application.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-indigo-100 bg-white px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-xs text-slate-400">Email</p>
+                <p className="truncate text-sm font-medium text-slate-700">
+                  {DEMO_EMAIL}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => copyCredential(DEMO_EMAIL, "email")}
+                className="flex shrink-0 items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+              >
+                {copiedField === "email" ? (
+                  <Check size={15} />
+                ) : (
+                  <Copy size={15} />
+                )}
+                {copiedField === "email" ? "Copied" : "Copy"}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-indigo-100 bg-white px-3 py-2">
+              <div>
+                <p className="text-xs text-slate-400">Password</p>
+                <p className="text-sm font-medium text-slate-700">
+                  {"•".repeat(12)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => copyCredential(DEMO_PASSWORD, "password")}
+                className="flex shrink-0 items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+              >
+                {copiedField === "password" ? (
+                  <Check size={15} />
+                ) : (
+                  <Copy size={15} />
+                )}
+                {copiedField === "password" ? "Copied" : "Copy"}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={fillDemoCredentials}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+          >
+            <Sparkles size={16} />
+            Fill Demo Credentials
+          </button>
+        </div>
         <form onSubmit={handleSubmit} className="mt-7 space-y-5">
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">

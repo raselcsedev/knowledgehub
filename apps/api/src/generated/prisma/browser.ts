@@ -37,3 +37,13 @@ export type Document = Prisma.DocumentModel
  * 
  */
 export type DocumentChunk = Prisma.DocumentChunkModel
+/**
+ * Model Conversation
+ * 
+ */
+export type Conversation = Prisma.ConversationModel
+/**
+ * Model Message
+ * 
+ */
+export type Message = Prisma.MessageModel

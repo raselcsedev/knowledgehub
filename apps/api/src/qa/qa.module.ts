@@ -23,5 +23,6 @@ import { OPENAI_CLIENT } from './qa.constants';
       },
     },
   ],
+  exports: [QaService],
 })
 export class QaModule {}

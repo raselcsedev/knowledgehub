@@ -54,7 +54,9 @@ export const ModelName = {
   User: 'User',
   RefreshToken: 'RefreshToken',
   Document: 'Document',
-  DocumentChunk: 'DocumentChunk'
+  DocumentChunk: 'DocumentChunk',
+  Conversation: 'Conversation',
+  Message: 'Message'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -128,6 +130,32 @@ export const DocumentChunkScalarFieldEnum = {
 } as const
 
 export type DocumentChunkScalarFieldEnum = (typeof DocumentChunkScalarFieldEnum)[keyof typeof DocumentChunkScalarFieldEnum]
+
+
+export const ConversationScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  userId: 'userId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ConversationScalarFieldEnum = (typeof ConversationScalarFieldEnum)[keyof typeof ConversationScalarFieldEnum]
+
+
+export const MessageScalarFieldEnum = {
+  id: 'id',
+  role: 'role',
+  content: 'content',
+  citations: 'citations',
+  provider: 'provider',
+  model: 'model',
+  embeddingModel: 'embeddingModel',
+  conversationId: 'conversationId',
+  createdAt: 'createdAt'
+} as const
+
+export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
 
 
 export const SortOrder = {

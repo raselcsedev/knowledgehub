@@ -29,9 +29,7 @@ const cookieOptions = {
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   // Login
   @Post('login')
@@ -96,9 +94,7 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    await this.authService.logout(
-      request.cookies?.[REFRESH_COOKIE],
-    );
+    await this.authService.logout(request.cookies?.[REFRESH_COOKIE]);
 
     response.clearCookie(ACCESS_COOKIE, {
       ...cookieOptions,
@@ -122,11 +118,11 @@ export class AuthController {
     @Req()
     request: Request & {
       user: {
-        id: string;
+        sub: string;
         email: string;
       };
     },
   ) {
-    return this.authService.getProfile(request.user.id);
+    return this.authService.getProfile(request.user.sub);
   }
 }

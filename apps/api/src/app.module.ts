@@ -7,7 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { DocumentsModule } from './documents/documents.module';
 import { SearchModule } from './search/search.module';
 import { QaModule } from './qa/qa.module';
-
+import { ConversationsModule } from './conversations/conversations.module';
 
 @Module({
   imports: [
@@ -22,6 +22,7 @@ import { QaModule } from './qa/qa.module';
     DocumentsModule,
     SearchModule,
     QaModule,
+    ConversationsModule,
   ],
 })
 export class AppModule {}

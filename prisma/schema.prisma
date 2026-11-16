@@ -22,6 +22,7 @@ model User {
 
   refreshTokens RefreshToken[]
   documents     Document[]
+  conversations Conversation[]
 }
 
 model RefreshToken {
@@ -45,15 +46,15 @@ enum DocumentStatus {
 }
 
 model Document {
-  id            String         @id @default(uuid())
-  title         String
-  originalName  String
-  mimeType      String
-  sizeBytes     Int
-  storagePath   String
-  status        DocumentStatus @default(UPLOADED)
+  id           String         @id @default(uuid())
+  title        String
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  storagePath  String
+  status       DocumentStatus @default(UPLOADED)
 
-  extractedText String?        @db.Text
+  extractedText String?   @db.Text
   processedAt   DateTime?
 
   userId String
@@ -67,14 +68,15 @@ model Document {
   @@index([userId])
   @@index([status])
 }
+
 model DocumentChunk {
-  id         String   @id @default(uuid())
-  content    String   @db.Text
+  id         String @id @default(uuid())
+  content    String @db.Text
   chunkIndex Int
   charCount  Int
-  
+
   // Embedding storage
-  embedding      Json?    @db.JsonB
+  embedding      Json?     @db.JsonB
   embeddingModel String?
   embeddedAt     DateTime?
 
@@ -85,4 +87,44 @@ model DocumentChunk {
 
   @@unique([documentId, chunkIndex])
   @@index([documentId])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Conversation {
+  id     String @id @default(uuid())
+  title  String @default("New conversation")
+  userId String
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model Message {
+  id      String      @id @default(uuid())
+  role    MessageRole
+  content String      @db.Text
+
+  // Store citations returned by the QA service
+  citations Json? @db.JsonB
+
+  // Preserve QA provider information
+  provider       String?
+  model          String?
+  embeddingModel String?
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, createdAt])
 }
